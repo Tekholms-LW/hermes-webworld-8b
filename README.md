@@ -278,3 +278,16 @@ To **strictly require** the fine-tuned model (fail if it can't load):
 ```bash
 SIMULATE_WEB_FORCE_MODEL=1
 ```
+
+### Strict Mode (Now Enabled by Default)
+
+The tool now **requires** the fine-tuned model by default (`SIMULATE_WEB_FORCE_MODEL=1`).
+
+- If the model fails to load, the tool will raise an error instead of falling back.
+- This ensures you are always using `webworld-hermes-8b-final` during simulation.
+
+To allow graceful fallback (not recommended for testing):
+
+```bash
+SIMULATE_WEB_FORCE_MODEL=0
+```
