@@ -258,3 +258,23 @@ Rules:
 
 When the user asks you to research, plan, or simulate a web task, your first response should be to call simulate_web_action.
 ```
+
+### Debug Logging (Now Enabled by Default)
+
+Debug logging is now **on by default**. You will see detailed output including:
+
+- When the fine-tuned model is being loaded
+- Whether the fine-tuned model was successfully used
+- Model loading errors (if any)
+
+To disable debug logging, set:
+
+```bash
+SIMULATE_WEB_DEBUG=0
+```
+
+To **strictly require** the fine-tuned model (fail if it can't load):
+
+```bash
+SIMULATE_WEB_FORCE_MODEL=1
+```

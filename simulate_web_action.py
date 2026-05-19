@@ -24,7 +24,7 @@ from typing import Optional, Dict, Any
 
 # ─── Configuration ─────────────────────────────────────────────────────────────
 
-DEBUG = os.getenv("SIMULATE_WEB_DEBUG", "0") == "1"
+DEBUG = os.getenv("SIMULATE_WEB_DEBUG", "1") == "1"
 FORCE_MODEL = os.getenv("SIMULATE_WEB_FORCE_MODEL", "0") == "1"
 
 MODEL_PATH = "/home/sky_ai/webworld-hermes-8b-final"
