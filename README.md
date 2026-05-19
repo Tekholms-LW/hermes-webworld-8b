@@ -173,3 +173,71 @@ Apache 2.0 (same as base WebWorld model)
 ---
 
 **Your Hermes Agent is now running with a specialized web world model that understands exactly how you browse, research, and interact with the web.**
+---
+
+## Integrating into Your Hermes Agent (Maximum Integration)
+
+Once you have the fine-tuned model, here’s how to use `webworld-hermes-8b-final` in your **normal Hermes sessions**.
+
+### 1. Update Your Hermes Configuration
+
+Add the following section to your `~/.hermes/config.yaml`:
+
+```yaml
+# WebWorld Hermes Integration
+web_simulator:
+  enabled: true
+  model_path: /home/sky_ai/webworld-hermes-8b-final
+  model_name: webworld-hermes-8b-final
+  mode: simulation_first
+  default_tool: simulate_web_action
+  max_simulation_steps: 25
+  use_bf16: true
+  auto_plan_before_action: true
+
+tools:
+  simulate_web_action:
+    enabled: true
+    path: /home/sky_ai/.hermes/tools/simulate_web_action.py
+    description: "Fast web state simulator using the Hermes-tuned WebWorld model. Always use this for planning multi-step web tasks before real browser actions."
+```
+
+### 2. Add the System Prompt Instruction
+
+Create or append to your system prompt / personality the following block:
+
+```markdown
+You have access to a specialized Hermes-tuned web world model called `webworld-hermes-8b-final`. This model can accurately simulate browser states and predict the outcome of actions based on your past interaction patterns.
+
+For any task that involves multiple web actions, research steps, or planning, you MUST follow this process:
+1. First use the `simulate_web_action` tool to run a simulated trajectory.
+2. Review the simulated states and results carefully.
+3. Only after simulation, decide whether to execute real browser actions.
+4. Prefer simulation for planning, risk assessment, and long-horizon tasks.
+
+When the user gives you a research or multi-step web task, start by simulating it first using the world model before taking real actions.
+```
+
+### 3. Quick Usage in Normal Sessions
+
+After integration, you can use natural language like:
+
+- `Research the latest efficient LLM inference papers and simulate first.`
+- `Help me find the best yields on Avalanche — use the world model simulator.`
+- `Plan a full investigation on this new token using simulation.`
+
+The agent will automatically start with `simulate_web_action` before making real browser calls.
+
+### 4. One-Command Setup (Recommended)
+
+```bash
+# Copy the simulator tool
+mkdir -p ~/.hermes/tools
+cp simulate_web_action.py ~/.hermes/tools/
+
+# Then add the config section above and restart Hermes
+```
+
+---
+
+**Your Hermes Agent is now fully upgraded with a specialized world model for web simulation.**
