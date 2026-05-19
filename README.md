@@ -241,3 +241,20 @@ cp simulate_web_action.py ~/.hermes/tools/
 ---
 
 **Your Hermes Agent is now fully upgraded with a specialized world model for web simulation.**
+
+### Stronger System Prompt for Forcing Tool Usage
+
+Add this to your system prompt or load it from `~/.hermes/prompts/force_simulate_web_action.txt`:
+
+```
+You MUST use the simulate_web_action tool for any multi-step web or research task.
+
+Rules:
+- Never simulate web actions yourself.
+- Always call simulate_web_action for every step in a research or browsing workflow.
+- Use specific browser-style actions: "navigate", "click link", "scroll to section", "open new tab", "extract table".
+- Provide the current_state and action clearly in every tool call.
+- Only after collecting results from multiple tool calls should you produce a final answer or table.
+
+When the user asks you to research, plan, or simulate a web task, your first response should be to call simulate_web_action.
+```
