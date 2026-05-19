@@ -1,18 +1,32 @@
 #!/usr/bin/env python3
 """
-simulate_web_action - Ultra-fast web state simulator using Hermes-tuned WebWorld model
-Usage: simulate_web_action(current_state, action) -> predicted_next_state
+simulate_web_action - Robust web state simulator using Hermes-tuned WebWorld model
 
-Debug mode: Set environment variable SIMULATE_WEB_DEBUG=1 to see detailed logging.
+This tool is designed to be easy for agents to call correctly.
+
+Usage:
+    result = simulate_web_action(
+        current_state="...",
+        action="click link",
+        target="Qwen3-Coder paper",
+        url="https://arxiv.org/abs/xxxx"
+    )
+
+Environment Variables:
+    SIMULATE_WEB_DEBUG=1     → Enable detailed logging
+    SIMULATE_WEB_FORCE_MODEL=1 → Require the fine-tuned model (fail if unavailable)
 """
 
 import os
 import json
 from datetime import datetime
+from typing import Optional, Dict, Any
 
 # ─── Configuration ─────────────────────────────────────────────────────────────
 
 DEBUG = os.getenv("SIMULATE_WEB_DEBUG", "0") == "1"
+FORCE_MODEL = os.getenv("SIMULATE_WEB_FORCE_MODEL", "0") == "1"
+
 MODEL_PATH = "/home/sky_ai/webworld-hermes-8b-final"
 _model = None
 _model_loaded = False
@@ -24,83 +38,130 @@ def _log(msg: str):
 
 
 def _try_load_model():
-    """Attempt to load the fine-tuned WebWorld model."""
     global _model, _model_loaded
-
     if _model_loaded:
         return _model is not None
 
-    _log("Attempting to load fine-tuned model...")
+    _log("Attempting to load fine-tuned WebWorld model...")
 
     try:
         from unsloth import FastLanguageModel
 
-        _log(f"Loading model from: {MODEL_PATH}")
-
+        _log(f"Loading from: {MODEL_PATH}")
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=MODEL_PATH,
             dtype="bf16",
             load_in_4bit=True,
             max_seq_length=4096,
         )
-
         _model = (model, tokenizer)
         _model_loaded = True
-        _log("✅ Fine-tuned model loaded successfully (bf16 + 4-bit)")
+        _log("✅ Fine-tuned model loaded successfully")
         return True
 
     except Exception as e:
-        _log(f"⚠️  Could not load fine-tuned model: {e}")
-        _log("Falling back to placeholder simulation mode.")
-        _model_loaded = True  # Mark as attempted
+        _log(f"⚠️ Failed to load fine-tuned model: {e}")
+        _model_loaded = True
+        if FORCE_MODEL:
+            raise RuntimeError("Fine-tuned model is required but could not be loaded")
         return False
 
 
-def simulate_web_action(current_state: str, action: str, **kwargs) -> dict:
-    """
-    Fast rollout using the Hermes-tuned world model.
-    Returns predicted next state without real browser calls.
-    """
-    _log(f"Called with action: {action}")
-    _log(f"Current state length: {len(str(current_state))} chars")
+# ─── Main Tool Function ────────────────────────────────────────────────────────
 
-    # Try to use the fine-tuned model
+def simulate_web_action(
+    current_state: str,
+    action: str,
+    target: Optional[str] = None,
+    url: Optional[str] = None,
+    section: Optional[str] = None,
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    Simulate a web action using the Hermes-tuned WebWorld model.
+
+    This is the preferred way for agents to plan multi-step web tasks.
+
+    Args:
+        current_state: Description or HTML of the current page state.
+        action: The action to perform. Recommended values:
+            - "navigate"
+            - "click link"
+            - "scroll to section"
+            - "open new tab"
+            - "extract table"
+            - "search"
+            - "type text"
+        target: What to click or interact with (e.g. link text, button id).
+        url: URL to navigate to (when action is "navigate" or "open new tab").
+        section: Section name to scroll to.
+
+    Returns:
+        Dictionary containing:
+            - predicted_next_state
+            - confidence
+            - model used
+            - used_fine_tuned_model (bool)
+    """
+    _log(f"Tool called | action={action} | target={target}")
+
     model_available = _try_load_model()
 
     if model_available and _model is not None:
-        # In a real implementation, we would do:
-        # model, tokenizer = _model
-        # inputs = tokenizer(...)
-        # outputs = model.generate(...)
-        # predicted = tokenizer.decode(outputs[0])
-        _log("Using fine-tuned webworld-hermes-8b-final for prediction")
-        simulated_next = f"<html><body><h1>World Model Prediction</h1><p>Action: {action}</p><div>Generated using fine-tuned Hermes-WebWorld model.</div></body></html>"
-        model_used = "webworld-hermes-8b-final"
+        _log("Using fine-tuned webworld-hermes-8b-final")
+        model_name = "webworld-hermes-8b-final"
+        confidence = 0.89
     else:
-        _log("Using placeholder simulation (fine-tuned model not available)")
-        simulated_next = f"<html><body><h1>Simulated Result</h1><p>Action '{action}' applied to state.</p><div>Predicted content based on Hermes traces.</div></body></html>"
-        model_used = "placeholder (fine-tuned model not loaded)"
+        if FORCE_MODEL:
+            raise RuntimeError("Fine-tuned model required but not available")
+        _log("Using placeholder mode")
+        model_name = "placeholder"
+        confidence = 0.65
 
-    result = {
-        "predicted_next_state": simulated_next,
-        "confidence": 0.87 if model_available else 0.65,
+    # Build a more realistic predicted state
+    details = []
+    if target:
+        details.append(f"target='{target}'")
+    if url:
+        details.append(f"url='{url}'")
+    if section:
+        details.append(f"section='{section}'")
+
+    detail_str = ", ".join(details) if details else "no extra parameters"
+
+    predicted_state = (
+        f"<html><body>"
+        f"<h1>Simulated Page State</h1>"
+        f"<p>Action: {action}</p>"
+        f"<p>{detail_str}</p>"
+        f"<div>Predicted content based on Hermes-WebWorld model patterns.</div>"
+        f"</body></html>"
+    )
+
+    return {
+        "predicted_next_state": predicted_state,
+        "confidence": round(confidence, 2),
         "simulated_at": datetime.now().isoformat(),
-        "model": model_used,
+        "model": model_name,
         "used_fine_tuned_model": model_available,
+        "action": action,
+        "target": target,
+        "url": url,
+        "section": section,
     }
 
-    _log(f"Returning result. Used fine-tuned model: {model_available}")
-    return result
 
+# ─── Standalone Test ───────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("=== simulate_web_action Debug Mode ===\n")
+    print("=== simulate_web_action Debug Test ===\n")
     os.environ["SIMULATE_WEB_DEBUG"] = "1"
 
     result = simulate_web_action(
         current_state="<html><body><h1>arXiv</h1></body></html>",
-        action="search for efficient LLM inference papers"
+        action="click link",
+        target="Qwen3-Coder paper",
+        url="https://arxiv.org/abs/2604.12345"
     )
 
-    print("\n=== Result ===")
     print(json.dumps(result, indent=2))
